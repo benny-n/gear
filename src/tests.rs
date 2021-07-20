@@ -24,6 +24,11 @@ mod tests {
         let matrix4 = Matrix4::new([[0f64; 4]; 4]);
         matrix4.inverse();
     }
+    
+    #[test]
+    fn test_faile_on_purpose(){
+        assert_eq!(0,1);
+    }
 }
 
 
