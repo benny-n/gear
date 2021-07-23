@@ -29,4 +29,11 @@ impl Vector2{
     pub fn magnitude(&self) -> f64{
         (self.x.powi(2) + self.y.powi(2)).sqrt()
     }
+    pub fn distance(first_vector: &Vector2, second_vector: &Vector2) -> f64 {
+        let distance : f64;
+        let x_delta_squared: f64 = (first_vector.x - second_vector.x).powi(2);
+        let y_delta_squared : f64 = (first_vector.y - second_vector.y).powi(2);
+        distance = (x_delta_squared + y_delta_squared).sqrt();
+        distance
+    }
 }
