@@ -3,32 +3,17 @@ mod tests {
     use std::any::Any;
     use crate::ecs::scene::Scene;
     use crate::math_engine::Vector3;
+    use crate::ecs::Component;
 
-    #[derive(Default)]
+    #[derive(Default, Component)]
     struct Shape {
         #[allow(dead_code)]
         vec3 : Vector3
     }
-    impl Component for Shape{
-        fn as_any(&self) -> &dyn Any {
-            self
-        }
-        fn as_mut_any(&mut self) -> &mut dyn Any {
-            self
-        }
-    }
-    #[derive(Default)]
+    #[derive(Default, Component)]
     struct Transform {
         #[allow(dead_code)]
         pub vec3 : Vector3
-    }
-    impl Component for Transform{
-        fn as_any(&self) -> &dyn Any {
-            self
-        }
-        fn as_mut_any(&mut self) -> &mut dyn Any {
-            self
-        }
     }
 
     #[test]
@@ -47,8 +32,6 @@ mod tests {
         assert_eq!(id5, id2);
         assert_eq!(id3, id4);
     }
-
-    use crate::ecs::Component;
 
     #[test]
     fn component_assign_test(){
