@@ -51,24 +51,17 @@ mod tests {
     use crate::ecs::Component;
 
     #[test]
-    fn entity_assign_test(){
+    fn component_assign_test(){
         let mut scene = Scene::new();
         let ent1 = scene.create_entity();
         let ent2 = scene.create_entity();
         let ent3 = scene.create_entity();
 
-        scene.assign::<Transform>(ent1);
-        scene.assign::<Transform>(ent2);
-        scene.assign::<Transform>(ent3);
-
-        //Check component pool size
-        // let pool_size = match scene.get_component_pool::<Transform>(){
-        //     Ok(pool) => pool.len(),
-        //     Err(err_msg) => panic!(err_msg),
-        // };
-        // assert_eq!(pool_size, 2);
+        scene.assign::<Transform>(ent1).unwrap();
+        scene.assign::<Transform>(ent2).unwrap();
+        scene.assign::<Transform>(ent3).unwrap();
     
-        scene.assign::<Shape>(ent3);
+        scene.assign::<Shape>(ent3).unwrap();
 
         match scene.get_component::<Transform>(ent1){
             Ok(component) => {
@@ -83,7 +76,7 @@ mod tests {
             Err(err_msg) => panic!("{}", err_msg)
         }
 
-        // Check that "Transform" component was modified:
+        // Check that "Transform" component was actually modified:
         match scene.get_component::<Transform>(ent1){
             Ok(component) => {
                 let transform: &Transform = match component.as_any().downcast_ref::<Transform>() {
@@ -111,5 +104,36 @@ mod tests {
             Ok(_) => panic!("ent1 shouldn't have \"Shape\" component"),
             Err(_) => ()
         }
+    }
+
+    #[test]
+    fn component_pool_size_test(){
+        let mut scene = Scene::new();
+        let ent1 = scene.create_entity();
+        let ent2 = scene.create_entity();
+        let ent3 = scene.create_entity();
+
+        match scene.get_component_pool_size::<Transform>(){
+            Ok(_) => panic!("Should be empty!"),
+            Err(_) => ()
+        };
+
+        scene.assign::<Transform>(ent1).expect("0");
+        let pool_size = match scene.get_component_pool_size::<Transform>(){
+            Ok(size) => size,
+            Err(err_msg) => panic!("{}", err_msg),
+        };
+
+        assert_eq!(pool_size, 1);
+
+        scene.assign::<Transform>(ent2).expect("1");
+        scene.assign::<Transform>(ent3).expect("2");
+
+        let pool_size = match scene.get_component_pool_size::<Transform>(){
+            Ok(size) => size,
+            Err(err_msg) => panic!("{}", err_msg),
+        };
+
+        assert_eq!(pool_size, 3);
     }
 }
