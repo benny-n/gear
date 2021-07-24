@@ -45,8 +45,6 @@ impl Scene{
         }    
     }
 
-    //TODO implement remove component
-
     pub fn get_component<T: Component>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
         let component_id = &self.get_component_type_id::<T>();
 
@@ -68,6 +66,11 @@ impl Scene{
                 Err(error_msg)
             }
         }
+    }
+
+    //TODO implement remove component
+    pub fn remove<T: 'static + Component>(&mut self, _entity_id: EntityId) -> Result<(), String>{
+        todo!();
     }
 
     pub fn assign<T: 'static + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{

@@ -119,4 +119,13 @@ mod tests {
 
         assert_eq!(pool_size, 3);
     }
+
+    #[test]
+    #[should_panic(expected = "not yet implemented")]
+    fn remove_component_test(){
+        let mut scene = Scene::new();
+        let ent1 = scene.create_entity();
+        scene.assign::<Transform>(ent1).expect("0");
+        scene.remove::<Transform>(ent1).unwrap(); // Should panic here
+    }
 }
