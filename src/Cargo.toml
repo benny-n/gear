@@ -9,4 +9,5 @@ edition = "2018"
 path = "./lib.rs"
 
 [dependencies]
+lazy_static = "1.4.0"
 component_macro = { path = "../component_macro" }

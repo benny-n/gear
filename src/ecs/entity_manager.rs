@@ -1,28 +1,45 @@
-use std::{any::type_name, collections::hash_map::Entry};
+use std::{any::type_name, collections::hash_map::Entry, sync::Mutex};
 
 use super::{Component, Entity, EntityId, ComponentPool, ComponentTypeId, HashMap};
+use lazy_static::{lazy_static};
 
-pub struct Scene{
-    component_type_counter : i64,
-    entity_id_counter : i64,
-    entities : Vec<Entity>,
+lazy_static! {
+    pub static ref ENTITY_MANAGER: Mutex<EntityManager> = {
+        let instance = Mutex::new(EntityManager::new());
+        instance
+    };
+}
+pub struct EntityManager{
+    component_type_counter : u64,
+    entity_id_counter : u64,
+    entities : HashMap<EntityId, Entity>,
     component_name_to_type_id : HashMap<String, ComponentTypeId>,
     component_pools : HashMap<ComponentTypeId, ComponentPool>,
 }
-impl Scene{
-    pub fn new() -> Self{
-        Scene{
+unsafe impl Sync for EntityManager{}
+impl EntityManager{
+    fn new() -> Self{
+        EntityManager{
             component_type_counter : 0,
             entity_id_counter : 0,
-            entities : Vec::new(),
+            entities : HashMap::new(),
             component_name_to_type_id : HashMap::new(),
             component_pools : HashMap::new(),
         }
     }
+
+    pub fn clear(&mut self){
+        self.component_type_counter = 0;
+        self.entity_id_counter = 0;
+        self.entities = HashMap::new();
+        self.component_name_to_type_id = HashMap::new();
+        self.component_pools = HashMap::new();
+    }
+
     pub fn create_entity(&mut self) -> EntityId{
         let id = self.entity_id_counter;
         self.entity_id_counter += 1;  
-        self.entities.push(Entity::new(id));
+        self.entities.insert(id, Entity::new(id));
         id
     }
     pub fn get_component_type_id<T>(&mut self) -> ComponentTypeId{
@@ -45,26 +62,20 @@ impl Scene{
         }    
     }
 
+    fn get_component_from_pool<'a>(entity_id : EntityId, pool : &'a mut ComponentPool) -> Result<&'a mut dyn Component, String>{
+        match pool.get_mut(&entity_id){
+            Some(component) => Ok(&mut **component),
+            None => Err(format!("The entity with ID {} does not own this component!", entity_id)), 
+        }       
+    }
+
     pub fn get_component<T: Component>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
         let component_id = &self.get_component_type_id::<T>();
-
         let component_pool = self.component_pools.get_mut(component_id);
+        
         match component_pool{
-            Some(pool) => {
-                match pool.get_mut(&entity_id){
-                    Some(component) => Ok(&mut **component),
-                    None => {
-                        let error_msg = 
-                            format!("The entity with ID {} does not own this component!", entity_id);
-                        Err(error_msg) 
-                    }
-                }    
-            }
-            None => {
-                let error_msg = 
-                    format!("The component does not exist in this scene!");
-                Err(error_msg)
-            }
+            Some(pool) => EntityManager::get_component_from_pool(entity_id, pool),    
+            None => Err(format!("The component {} does not exist in this scene!", type_name::<T>())),
         }
     }
 
@@ -73,7 +84,7 @@ impl Scene{
         todo!();
     }
 
-    pub fn assign<T: 'static + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
+    pub fn assign<T: 'static + Send + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
         let component_type_id = self.get_component_type_id::<T>();
 
         match self.component_pools
