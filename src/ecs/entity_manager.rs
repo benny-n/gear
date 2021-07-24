@@ -87,17 +87,17 @@ impl EntityManager{
     pub fn assign<T: 'static + Send + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
         let component_type_id = self.get_component_type_id::<T>();
 
-        match self.component_pools
+        let component_pool =  self.component_pools
             .entry(component_type_id)
-            .or_insert_with(HashMap::new)
-            .entry(entity_id){
+            .or_insert_with(HashMap::new);
+
+        match component_pool.entry(entity_id){
+            
                 Entry::Occupied(_) => 
                     Err(format!("Component {} already exists for entity {}", type_name::<T>(), entity_id)),
-                Entry::Vacant(_) => {
-                    self.component_pools
-                        .entry(component_type_id)
-                        .or_insert_with(HashMap::new)
-                        .insert(entity_id,Box::new(T::default()));  
+
+                Entry::Vacant(entry) => {
+                    entry.insert(Box::new(T::default()));  
                     Ok(self.get_component::<T>(entity_id).unwrap())
             },   
         }
