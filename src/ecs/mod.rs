@@ -1,10 +1,11 @@
+extern crate lazy_static;
 mod tests;
 pub mod entity;
-pub mod scene;
+pub mod entity_manager;
 pub mod component;
 pub use self::component::Component;
 pub use self::entity::Entity;
 pub use std::{collections::HashMap, error::Error};
-pub type EntityId = i64;
-pub type ComponentTypeId = i64;
-pub type ComponentPool = HashMap<EntityId, Box<dyn Component>>;
+pub type EntityId = u64;
+pub type ComponentTypeId = u64;
+pub type ComponentPool = HashMap<EntityId, Box<dyn Component + Send>>;
