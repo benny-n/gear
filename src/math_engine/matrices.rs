@@ -1,3 +1,4 @@
+#[derive (Debug, PartialEq)]
 pub struct Matrix4{
     #[allow(dead_code)] // TODO: this is here only to silence compiler warnings, remove this later
     mat : [[f64; 4]; 4],

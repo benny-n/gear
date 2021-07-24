@@ -1,7 +1,8 @@
+#[derive (Debug, PartialEq, Default)]
 pub struct Vector3{
-    x : f64,
-    y : f64,
-    z : f64,
+    pub x : f64,
+    pub y : f64,
+    pub z : f64,
 }
 impl Vector3{
     pub fn new(x: f64, y: f64, z: f64) -> Vector3{
@@ -14,9 +15,10 @@ impl Vector3{
     }
 }
 
+#[derive (Debug, PartialEq, Default)]
 pub struct Vector2{
-    x : f64,
-    y : f64,
+    pub x : f64,
+    pub y : f64,
 }
 impl Vector2{
     pub fn new(x: f64, y: f64,) -> Vector2{
