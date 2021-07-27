@@ -35,6 +35,31 @@ mod tests {
     }
 
     #[test]
+    fn component_modify_test() -> Result<(), String>{
+        let entity_manager = &mut *ENTITY_MANAGER.lock().unwrap();
+        let ent1 = entity_manager.create_entity();
+        let ent2 = entity_manager.create_entity();
+        
+        // Modify the "Transform" component for entity 1
+        let transform = entity_manager.assign::<Transform>(ent1)?;
+        transform.vec3.x = 6.;
+        transform.vec3.y = 0.;
+        transform.vec3.z = 8.;
+        
+        // Check that "Transform" component was actually modified:
+        let transform1 = entity_manager.get_component::<Transform>(ent1)?;
+        assert_eq!(transform1.vec3.magnitude(), 10.);
+        
+        // Sanity check
+        entity_manager.assign::<Transform>(ent2)?;
+        let transform2 = entity_manager.get_component::<Transform>(ent2)?;
+        assert_eq!(transform2.vec3.magnitude(), 0.);
+
+        entity_manager.clear();
+        Ok(())
+    }
+
+    #[test]
     fn component_assign_test(){
         let entity_manager = &mut *ENTITY_MANAGER.lock().unwrap();
         let ent1 = entity_manager.create_entity();
@@ -43,34 +68,8 @@ mod tests {
 
         entity_manager.assign::<Transform>(ent1).unwrap();
         entity_manager.assign::<Transform>(ent2).unwrap();
-        entity_manager.assign::<Transform>(ent3).unwrap();
-    
+        entity_manager.assign::<Transform>(ent3).unwrap();  
         entity_manager.assign::<Shape>(ent3).unwrap();
-
-        match entity_manager.get_component::<Transform>(ent1){
-            Ok(component) => {
-                let transform: &mut Transform = match component.as_mut_any().downcast_mut::<Transform>() {
-                    Some(transform) => transform,
-                    None => panic!("&component isn't a Transform!"),
-                };
-                transform.vec3.x = 6.;
-                transform.vec3.y = 0.;
-                transform.vec3.z = 8.;
-            }
-            Err(err_msg) => panic!("{}", err_msg)
-        }
-
-        // Check that "Transform" component was actually modified:
-        match entity_manager.get_component::<Transform>(ent1){
-            Ok(component) => {
-                let transform: &Transform = match component.as_any().downcast_ref::<Transform>() {
-                    Some(transform) => transform,
-                    None => panic!("&component isn't a Transform!"),
-                };
-                assert_eq!(transform.vec3.magnitude(), 10.)
-            }
-            Err(err_msg) => panic!("{}", err_msg)
-        }
 
         match entity_manager.get_component::<Transform>(ent2){
             Ok(_) => (),
