@@ -69,12 +69,15 @@ impl EntityManager{
         }       
     }
 
-    pub fn get_component<T: Component>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
+    pub fn get_component<T: 'static + Component>(&mut self, entity_id: EntityId) -> Result<&mut T, String>{
         let component_id = &self.get_component_type_id::<T>();
         let component_pool = self.component_pools.get_mut(component_id);
-        
+
         match component_pool{
-            Some(pool) => EntityManager::get_component_from_pool(entity_id, pool),    
+            Some(pool) => {
+                let component = EntityManager::get_component_from_pool(entity_id, pool);
+                Ok(component?.as_mut_any().downcast_mut::<T>().unwrap())
+            },
             None => Err(format!("The component {} does not exist in this scene!", type_name::<T>())),
         }
     }
@@ -84,7 +87,7 @@ impl EntityManager{
         todo!();
     }
 
-    pub fn assign<T: 'static + Send + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
+    pub fn assign<T: 'static + Send + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut T, String>{
         let component_type_id = self.get_component_type_id::<T>();
 
         let component_pool =  self.component_pools
