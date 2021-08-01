@@ -42,6 +42,31 @@ mod tests {
     }
 
     #[test]
+    fn component_modify_test() -> Result<(), String>{
+        let entity_manager = &mut *ENTITY_MANAGER.lock().unwrap();
+        let ent1 = entity_manager.create_entity();
+        let ent2 = entity_manager.create_entity();
+        
+        // Modify the "Transform" component for entity 1
+        let transform = entity_manager.assign::<Transform>(ent1)?;
+        transform.vec3.x = 6.;
+        transform.vec3.y = 0.;
+        transform.vec3.z = 8.;
+        
+        // Check that "Transform" component was actually modified:
+        let transform1 = entity_manager.get_component::<Transform>(ent1)?;
+        assert_eq!(transform1.vec3.magnitude(), 10.);
+        
+        // Sanity check
+        entity_manager.assign::<Transform>(ent2)?;
+        let transform2 = entity_manager.get_component::<Transform>(ent2)?;
+        assert_eq!(transform2.vec3.magnitude(), 0.);
+
+        entity_manager.clear();
+        Ok(())
+    }
+
+    #[test]
     fn component_assign_test(){
         let entity_manager = &mut *entity_manager::get_instance();
         let ent1 = entity_manager.create_entity();
