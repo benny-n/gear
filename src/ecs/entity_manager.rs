@@ -1,6 +1,6 @@
-use std::{any::type_name, collections::hash_map::Entry, sync::Mutex};
+use std::{any::{TypeId, type_name}, collections::hash_map::Entry, sync::{Mutex, MutexGuard}};
 
-use super::{Component, Entity, EntityId, ComponentPool, ComponentTypeId, HashMap};
+use super::{Component, Entity, EntityId, ComponentPool, HashMap};
 use lazy_static::{lazy_static};
 
 lazy_static! {
@@ -9,30 +9,27 @@ lazy_static! {
         instance
     };
 }
+pub fn get_instance() -> MutexGuard<'static, EntityManager>{
+    ENTITY_MANAGER.lock().unwrap()
+}
 pub struct EntityManager{
-    component_type_counter : u64,
     entity_id_counter : u64,
     entities : HashMap<EntityId, Entity>,
-    component_name_to_type_id : HashMap<String, ComponentTypeId>,
-    component_pools : HashMap<ComponentTypeId, ComponentPool>,
+    component_pools : HashMap<TypeId, ComponentPool>,
 }
 unsafe impl Sync for EntityManager{}
 impl EntityManager{
     fn new() -> Self{
         EntityManager{
-            component_type_counter : 0,
             entity_id_counter : 0,
             entities : HashMap::new(),
-            component_name_to_type_id : HashMap::new(),
             component_pools : HashMap::new(),
         }
     }
 
     pub fn clear(&mut self){
-        self.component_type_counter = 0;
         self.entity_id_counter = 0;
         self.entities = HashMap::new();
-        self.component_name_to_type_id = HashMap::new();
         self.component_pools = HashMap::new();
     }
 
@@ -42,21 +39,24 @@ impl EntityManager{
         self.entities.insert(id, Entity::new(id));
         id
     }
-    pub fn get_component_type_id<T>(&mut self) -> ComponentTypeId{
-        match self.component_name_to_type_id.get(type_name::<T>()){
-            Some(component_id) => *component_id,
-            None => {
-                let component_id = self.component_type_counter;
-                self.component_name_to_type_id.insert(String::from(type_name::<T>()), component_id);
-                self.component_type_counter += 1;
-                component_id
-            }
-        }         
+    pub fn remove_entity(&mut self, entity_id: EntityId) -> Result<(), String>{
+        let result = self.entities.remove(&entity_id);
+        match result{
+            Some(_) => {
+                for pool in self.component_pools.values_mut(){
+                    pool.remove_entry(&entity_id);
+                }
+                self.component_pools.retain(|_, pool|{
+                    !pool.is_empty()
+                });
+                Ok(())
+            },
+            None => Err(format!("The entity with ID {} does not exist!", entity_id)),
+        }
     }
 
-    pub fn get_component_pool_size<T>(&mut self) -> Result<usize, String>{
-        let component_type_id = &self.get_component_type_id::<T>();
-        match self.component_pools.get(component_type_id){
+    pub fn get_component_pool_size<T: 'static>(&self) -> Result<usize, String>{
+        match self.component_pools.get(&TypeId::of::<T>()){
             Some(pool) => Ok(pool.len()),
             None => Err(String::from("Pool does not exist for this component")),
         }    
@@ -69,26 +69,40 @@ impl EntityManager{
         }       
     }
 
-    pub fn get_component<T: Component>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
-        let component_id = &self.get_component_type_id::<T>();
-        let component_pool = self.component_pools.get_mut(component_id);
-        
+    pub fn get_component<T: 'static + Component>(&mut self, entity_id: EntityId) -> Result<&mut T, String>{
+        let component_pool = self.component_pools.get_mut(&TypeId::of::<T>());
+
         match component_pool{
-            Some(pool) => EntityManager::get_component_from_pool(entity_id, pool),    
+            Some(pool) => {
+                let component = EntityManager::get_component_from_pool(entity_id, pool);
+                Ok(component?.as_mut_any().downcast_mut::<T>().unwrap())
+            },
             None => Err(format!("The component {} does not exist in this scene!", type_name::<T>())),
         }
     }
 
-    //TODO implement remove component
-    pub fn remove<T: 'static + Component>(&mut self, _entity_id: EntityId) -> Result<(), String>{
-        todo!();
+    pub fn remove<T: 'static + Component>(&mut self, entity_id: EntityId) -> Result<(), String>{
+        let component_type_id = &TypeId::of::<T>();
+
+        match self.get_component::<T>(entity_id){
+            Ok(_) => {
+                let pool = self.component_pools
+                .get_mut(component_type_id)
+                .unwrap();
+                pool.remove_entry(&entity_id);
+                if pool.is_empty(){
+                    self.component_pools.remove_entry(component_type_id);
+                }
+                Ok(())
+            },
+            Err(err_msg) => Err(err_msg),
+        }
     }
 
-    pub fn assign<T: 'static + Send + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut dyn Component, String>{
-        let component_type_id = self.get_component_type_id::<T>();
+    pub fn assign<T: 'static + Send + Component + Default>(&mut self, entity_id: EntityId) -> Result<&mut T, String>{
 
         let component_pool =  self.component_pools
-            .entry(component_type_id)
+            .entry(TypeId::of::<T>())
             .or_insert_with(HashMap::new);
 
         match component_pool.entry(entity_id){
